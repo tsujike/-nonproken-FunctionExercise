@@ -3,13 +3,13 @@ class DataSheet {
 
   /** コンストラクタ */
   constructor() {
-    this.id = SHEET_ID;　//global.gsに定義しています
-    this.sheetName = 'Data';
+    this.id = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");　//global.gsに定義しています
+    this.sheetName = '1本目';
     this.sheet = SpreadsheetApp.openById(this.id).getSheetByName(this.sheetName);
   }
 
-  /** すべてのRecordsをdictsMapsで取得するメソッド
-   * @return{Array} objArray
+  /** すべてのRecordsをオブジェクトレコーズで取得するメソッド
+   * @return{Array} objRecords
    */
   getDataSheetRecords() {
     const [header, ...records] = this.sheet.getDataRange().getValues();
@@ -24,59 +24,59 @@ class DataSheet {
   }
 
 
-/** starのついていないRecordだけを取得するメソッド */
-  getRecordWithoutStar() {
-    const record = this.getDataSheetRecords().filter(record => record['star'] !== '★');
-    return record;
+  /** 商品名テーブルの商品ID列を取得するメソッド
+   * @return{Array}
+   */
+  getItemNameColumn_() {
+    const data = this.getDataSheetRecords();
+    const ids = data.map(record => { return record["商品ID"] });
+
+    //空白セルが入ってることがあるっぽい
+    const itemNameColum = ids.filter(id => id !== "");
+
+    return itemNameColum
   }
 
 
-  /** recordをSTAR済みにしてDataシートを更新するメソッド */
-  setStarToDataSheetRecord() {
-
-    //すべてのrecordsを取得
-    const objectRecords = this.getDataSheetRecords();
-
-    //スターでフィルター掛け
-    const withoutStarRecords = objectRecords.filter(record => record['star'] !== '★');
-
-    //スターを付ける
-    withoutStarRecords.map(record => {
-      record['star'] = '★';
-      return record;
-    });
-
-    //Dataシートに貼り付け
-    this.setAllRecords_(objectRecords);
-
-    return "Dataシートに引数を渡しました";
-
-  }
-
-
-  /** 受け取ったdictsMapsをシートに上書きする 
-    * @param{Array} objectRecords
-    */
-  setAllRecords_(objectRecords) {
-
-    //2次元配列に戻す
-    const records = objectRecords.map(record => Object.values(record));
-
-    //貼り付け    
-    this.sheet.getRange(2, 1, records.length, records[0].length).setValues(records);
+  /** 受け取った2次元配列をシートに上書きする 
+  * @param{array} Records
+  */
+  setRecords_(records) {
+    this.sheet.getRange(2, 6, records.length, records[0].length).setValues(records);
     return 'Dataシートに書き込み完了しました';
+  }
 
+  /** 商品名テーブルの商品名を埋めた2次元配列を返すメソッド
+  * @return{array} 商品名を含む2次元配列
+  */
+  getResultItemNameTable_() {
+
+    //商品ID列
+    const ids = this.getItemNameColumn_()
+
+    //全レコード
+    const table = this.getDataSheetRecords();
+
+    //商品ID列を回しながら、全レコードから商品名テーブルを完成させる
+    ids.forEach((id, index) => table[index]["商品名"] = this.getItemName_(id));
+
+    //商品名テーブルのみを返す
+    const itemNamesTable = table.map(record => { return [record["商品ID"], record["商品名"]] })
+    return itemNamesTable;
   }
 
 
-  /** シートのクリア(単独で走らせたら危ないので、必ずプライベート化して、setAllRecords()などに組み込む) */
-  sheetClear_() {
-    const lastRow = this.sheet.getLastRow();
-    const lastColumn = this.sheet.getLastColumn();
-    const range = this.sheet.getRange(2, 1, lastRow, lastColumn);
-    range.clear();
-    return 'シートをクリアしました';
+  /** 商品IDを渡すと、商品名を返すメソッド
+   * @param{string} 商品ID 
+  * @return{string} 商品名
+  */
+  getItemName_(itemId) {
+    const filteredRecord = this.getDataSheetRecords().filter(record => record["商品IDマスタ"] === itemId)[0]; //1件しかヒットしない
+    return filteredRecord["商品名マスタ"];
   }
+
+
+
 
 
 }
@@ -89,18 +89,23 @@ function testDataSheet() {
   //Dataシートの・・・
   const d = new DataSheet();
 
-  //全てのRecordsをdictsMapsで取得する
+  //全てのRecordsをオブジェクトレコーズで取得する
   const records = d.getDataSheetRecords();
   // console.log(d.getDataSheetRecords());
 
-  //starのついていないRecordだけをobjectRecordsで取得する（1件のはず）
-  const record = d.getRecordWithoutStar();
-  // console.log(d.getRecordWithoutStar());
+  //商品マスタを取得する
+  // const masterTableObjRecords = d.getMasterTable();
+  // console.log(masterTableObjRecords);
 
-  // すべてのRecordsにStarをつけて更新するメソッド
-  console.log(d.setStarToDataSheetRecord());
+  //商品IDを渡すと、商品名を返す
+  const itemId = "Z002";
+  // console.log(d.getItemName_(itemId));
 
-  //シートのクリア sheetClear()　単独では呼ばない
-  // console.log(d.sheetClear_());
+  //商品名テーブルの商品名を埋めたものを返す
+  // console.log(d.getResultItemNameTable_());
+
+  //商品名テーブルを受け取ってシートに上書きする 
+  const itemNamesTable = d.getResultItemNameTable_();
+  console.log(d.setRecords_(itemNamesTable));
 
 }
