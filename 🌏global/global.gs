@@ -9,7 +9,7 @@ function setPropertyStore() {
   // const a = properties.getProperty('ACCESS_TOKEN');
   // console.log(a);
 
-  // const SPREADSHEET_ID = "ここにスプレッドシートIDを入力して実行する";
+  // const SPREADSHEET_ID = "1GT0JrorLObIftUwZLSQeNn_VgZ4ODMksmEQn3rrp-TM";
   // properties.setProperty('SPREADSHEET_ID', SPREADSHEET_ID);
 
 
